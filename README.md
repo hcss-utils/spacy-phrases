@@ -15,7 +15,7 @@ $ . env/bin/activate
 $ pip install -r requirements.txt
 ```
 
-To run the app, use `python scripts/main.py`: 
+To extract phrases, run `python scripts/main.py`: 
 
 ```console
 Usage: main.py [OPTIONS] INPUT_TABLE OUTPUT_JSONL
@@ -36,3 +36,5 @@ Options:
                                   copy it or customize the installation.
   --help                          Show this message and exit.
 ```
+
+To count phrases, see [`notebooks/count-phrases.ipynb`](notebooks/count-phrases.ipynb)
