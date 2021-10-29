@@ -8,7 +8,7 @@ import typer
 import spacy
 import pandas as pd
 
-JSONL = Dict[str, Union[int, str, Any]]
+JSONL = Dict[str, List[str]]
 Phrases = Dict[str, List[str]]
 
 
