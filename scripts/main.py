@@ -25,7 +25,21 @@ def extract_chunks(
     uuid_column: str = "uuid",
     pattern: str = "influenc",
 ) -> Iterator[Phrases]:
-    """Extract noun-chunks from streamed 'csv_reader'."""
+    """Extract noun-chunks from streamed 'csv_reader'.
+
+    Parameters
+    ----------
+    nlp: spacy.language.Language
+        language model that identifies phrases and takes care of lemmatization
+    csv_reader: pd.io.parsers.TextFileReader
+        pandas' file reader that processes .csv file in chunks
+    text_column: str
+        text column that we extract phrases from (stored as dict values)
+    uuid_column: str
+        id column that we use to identify phrases (stored dict keys)
+    pattern: str
+        regex pattern that identifies relevant texts
+    """
     for csv_chunk in csv_reader:
         _mask = csv_chunk[text_column].str.contains(pattern, na=False, case=False)
         df = csv_chunk.loc[_mask].reset_index(drop=True)
