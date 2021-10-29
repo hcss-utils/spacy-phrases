@@ -2,7 +2,7 @@
 import json
 from pathlib import Path
 from collections import defaultdict
-from typing import Any, Dict, Iterator, List, Union
+from typing import Dict, Iterator, List
 
 import typer
 import spacy
@@ -56,6 +56,7 @@ def main(
     uuid_field: str = "uuid",
     pattern: str = "influenc",
 ) -> None:
+    """Extract noun phrases using spaCy."""
     nlp = spacy.load(model, disable=["ner"])
     nlp.max_length = 2_000_000  # based on previous cases
     csv_reader = pd.read_csv(input_table, chunksize=10)

@@ -20,12 +20,14 @@ To extract phrases, run `python scripts/main.py`:
 ```console
 Usage: main.py [OPTIONS] INPUT_TABLE OUTPUT_JSONL
 
+  Extract noun phrases using spaCy.
+
 Arguments:
   INPUT_TABLE   [required]
   OUTPUT_JSONL  [required]
 
 Options:
-  --model TEXT                    [default: en-core-web-sm]
+  --model TEXT                    [default: en_core_web_sm]
   --text-field TEXT               [default: fulltext]
   --uuid-field TEXT               [default: uuid]
   --pattern TEXT                  [default: influenc]
