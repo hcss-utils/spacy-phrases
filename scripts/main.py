@@ -6,13 +6,12 @@ from typing import Any, Dict, Iterator, List, Union
 
 import typer
 import spacy
-import pandas as pd
+import pandas as pd  # type: ignore
 
-JSONL = Dict[str, List[str]]
 Phrases = Dict[str, List[str]]
 
 
-def update_jsonl(p: Path, lines: JSONL) -> None:
+def update_jsonl(p: Path, lines: Phrases) -> None:
     """Update JSONLines file with content."""
     with p.open("a", encoding="utf-8") as output:
         json.dump(lines, output)
