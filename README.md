@@ -15,7 +15,7 @@ $ . env/bin/activate
 $ pip install -r requirements.txt
 ```
 
-To run the app, use `python main.py`: 
+To run the app, use `python scripts/main.py`: 
 
 ```console
 Usage: main.py [OPTIONS] INPUT_TABLE OUTPUT_JSONL
