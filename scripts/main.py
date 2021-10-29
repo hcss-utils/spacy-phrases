@@ -36,7 +36,7 @@ def extract_chunks(
     text_column: str
         text column that we extract phrases from (stored as dict values)
     uuid_column: str
-        id column that we use to identify phrases (stored dict keys)
+        id column that we use to identify phrases (stored as dict keys)
     pattern: str
         regex pattern that identifies relevant texts
     """
@@ -66,14 +66,16 @@ def main(
     input_table: Path = typer.Argument(..., exists=True, dir_okay=False),
     output_jsonl: Path = typer.Argument(..., dir_okay=False),
     model: str = "en_core_web_sm",
+    models_max_length: int = 2_000_000,
+    table_chunksize: int = 10,
     text_field: str = "fulltext",
     uuid_field: str = "uuid",
     pattern: str = "influenc",
 ) -> None:
     """Extract noun phrases using spaCy."""
     nlp = spacy.load(model, disable=["ner"])
-    nlp.max_length = 2_000_000  # based on previous cases
-    csv_reader = pd.read_csv(input_table, chunksize=10)
+    nlp.max_length = models_max_length
+    csv_reader = pd.read_csv(input_table, chunksize=table_chunksize)
     for document in extract_chunks(
         nlp=nlp,
         csv_reader=csv_reader,

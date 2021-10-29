@@ -28,6 +28,8 @@ Arguments:
 
 Options:
   --model TEXT                    [default: en_core_web_sm]
+  --models-max-length INTEGER     [default: 2000000]
+  --table-chunksize INTEGER       [default: 10]
   --text-field TEXT               [default: fulltext]
   --uuid-field TEXT               [default: uuid]
   --pattern TEXT                  [default: influenc]
@@ -36,6 +38,7 @@ Options:
   --show-completion [bash|zsh|fish|powershell|pwsh]
                                   Show completion for the specified shell, to
                                   copy it or customize the installation.
+
   --help                          Show this message and exit.
 ```
 
