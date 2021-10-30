@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 import json
-from pathlib import Path
 from collections import defaultdict
+from pathlib import Path
 from typing import Dict, Iterator, List
 
-import typer
-import spacy
 import pandas as pd  # type: ignore
+import spacy
+import typer
 
 Phrases = Dict[str, List[str]]
 
