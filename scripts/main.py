@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""Typer app that extracts noun phrases using spaCy."""
 import json
 from collections import defaultdict
 from pathlib import Path
@@ -11,9 +12,9 @@ import typer
 Phrases = Dict[str, List[str]]
 
 
-def update_jsonl(p: Path, lines: Phrases) -> None:
+def update_jsonl(path: Path, lines: Phrases) -> None:
     """Update JSONLines file with content."""
-    with p.open("a", encoding="utf-8") as output:
+    with path.open("a", encoding="utf-8") as output:
         json.dump(lines, output)
         output.write("\n")
 
@@ -21,8 +22,8 @@ def update_jsonl(p: Path, lines: Phrases) -> None:
 def extract_chunks(
     nlp: spacy.language.Language,
     csv_reader: pd.io.parsers.TextFileReader,
-    text_column: str = "fulltext",
-    uuid_column: str = "uuid",
+    text: str = "fulltext",
+    uuid: str = "uuid",
     pattern: str = "influenc",
 ) -> Iterator[Phrases]:
     """Extract noun-chunks from streamed 'csv_reader'.
@@ -33,33 +34,31 @@ def extract_chunks(
         language model that identifies phrases and takes care of lemmatization
     csv_reader: pd.io.parsers.TextFileReader
         pandas' file reader that processes .csv file in chunks
-    text_column: str
+    text: str
         text column that we extract phrases from (stored as dict values)
-    uuid_column: str
+    uuid: str
         id column that we use to identify phrases (stored as dict keys)
     pattern: str
         regex pattern that identifies relevant texts
     """
-    for csv_chunk in csv_reader:
-        _mask = csv_chunk[text_column].str.contains(pattern, na=False, case=False)
-        df = csv_chunk.loc[_mask].reset_index(drop=True)
+    for chunk in csv_reader:
+        mask = chunk[text].str.contains(pattern, na=False, case=False)
+        df = chunk.loc[mask].reset_index(drop=True)
         if df.empty:
             continue
-        data_tuples = (
-            (df.loc[idx, text_column], df.loc[idx, uuid_column]) for idx in df.index
-        )
-        for doc, uuid in nlp.pipe(data_tuples, as_tuples=True):
-            dd = defaultdict(list)
-            for chunk in doc.noun_chunks:
+        data_tuples = ((df.loc[idx, text], df.loc[idx, uuid]) for idx in df.index)
+        for doc, _id in nlp.pipe(data_tuples, as_tuples=True):
+            phrases = defaultdict(list)
+            for noun_chunk in doc.noun_chunks:
                 if (
-                    pattern not in chunk.lemma_
-                    or any(t.is_stop or t.is_digit for t in chunk)
-                    or len(chunk) < 2
+                    pattern not in noun_chunk.lemma_
+                    or any(t.is_stop or t.is_digit for t in noun_chunk)
+                    or len(noun_chunk) < 2
                 ):
                     continue
-                dd[uuid].append(chunk.lemma_)
-            if dd:
-                yield dd
+                phrases[_id].append(noun_chunk.lemma_.lower())
+            if phrases:
+                yield phrases
 
 
 def main(
@@ -79,8 +78,8 @@ def main(
     for document in extract_chunks(
         nlp=nlp,
         csv_reader=csv_reader,
-        text_column=text_field,
-        uuid_column=uuid_field,
+        text=text_field,
+        uuid=uuid_field,
         pattern=pattern,
     ):
         update_jsonl(output_jsonl, document)
