@@ -94,5 +94,7 @@ Options:
 
 Once phrases/matches extracted, you could transform them into a usable format, or/and 
 count their frequencies:
-- to extract phrases from matches (process rule-based matching output), see []()
-- to count extacted phrases, see [notebooks/count-noun-chunk-phrases.ipynb](notebooks/count-noun-chunk-phrases.ipynb)
+- to extract phrases from matches (process rule-based matching output), 
+see [notebooks/count-matcher-phrases.ipynb](notebooks/count-matcher-phrases.ipynb)
+- to count extacted phrases, 
+see [notebooks/count-noun-chunk-phrases.ipynb](notebooks/count-noun-chunk-phrases.ipynb)
