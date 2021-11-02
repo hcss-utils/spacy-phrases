@@ -1,0 +1,7 @@
+{
+    "pattern": [
+        {"RIGHT_ID": "anchor_influence", "RIGHT_ATTRS": {"LEMMA": "influence"}},
+        {"LEFT_ID": "anchor_influence", "REL_OP": ">", "RIGHT_ID": "subject", "RIGHT_ATTRS": {"DEP": "nsubj"}},
+        {"LEFT_ID": "anchor_influence", "REL_OP": ">", "RIGHT_ID": "influence_object", "RIGHT_ATTRS": {"DEP": "dobj"}}
+    ]
+}
