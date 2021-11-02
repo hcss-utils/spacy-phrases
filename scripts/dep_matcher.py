@@ -9,7 +9,7 @@ import typer
 import spacy
 from spacy.matcher import DependencyMatcher
 
-Phrases = Dict[str, Dict[str, List[str]]]
+Phrases = Dict[str, Dict[str, List[Dict[str, str]]]]
 Patterns = List[Dict[str, Union[str, Dict[str, str]]]]
 
 
