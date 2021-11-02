@@ -1,19 +1,20 @@
 # -*- coding: utf-8 -*-
-import time
+"""spaCy's Dependency Matcher exposed via Typer app."""
 import json
 from pathlib import Path
 from typing import Dict, Iterator, List, Union
 
 import pandas as pd  # type: ignore
+import typer
 import spacy
 from spacy.matcher import DependencyMatcher
-import typer
 
-Phrases = Dict[str, List[str]]
+Phrases = Dict[str, Dict[str, List[str]]]
 Patterns = List[Dict[str, Union[str, Dict[str, str]]]]
 
 
 def read_pattern(path: Path) -> Patterns:
+    """Read patterns JSON file."""
     with path.open("r", encoding="utf-8") as file_content:
         pattern = json.load(file_content)["pattern"]
     return pattern
@@ -24,6 +25,21 @@ def update_jsonl(path: Path, lines: Phrases) -> None:
     with path.open("a", encoding="utf-8") as output:
         json.dump(lines, output, ensure_ascii=False)
         output.write("\n")
+
+
+def build_matcher(nlp: spacy.language.Language, patterns: Path) -> DependencyMatcher:
+    """Build Dependency Matcher."""
+    matcher = DependencyMatcher(nlp.vocab)
+    if patterns.is_dir():
+        for patterns_file in patterns.rglob("*.json"):
+            pattern = read_pattern(patterns_file)
+            matcher.add(patterns_file.stem, [pattern])
+    elif patterns.is_file():
+        pattern = read_pattern(patterns)
+        matcher.add(patterns.stem, [pattern])
+    else:
+        raise ValueError("patterns should either be a non-empty dir or a file.")
+    return matcher
 
 
 def extract_chunks(
@@ -48,12 +64,12 @@ def extract_chunks(
     uuid: str
         id column that we use to identify phrases (stored as dict keys)
     """
-    for idx, df in enumerate(csv_reader):
+    for idx, df in enumerate(csv_reader, start=1):
         if df.empty:
             continue
         data_tuples = ((df.loc[idx, text], df.loc[idx, uuid]) for idx in df.index)
         for doc, _id in nlp.pipe(data_tuples, as_tuples=True):
-            phrases = {}
+            phrases: Phrases = {}
             for match_id, (start, end) in matcher(doc):
                 label = nlp.vocab[match_id].text
                 if _id not in phrases:
@@ -63,15 +79,12 @@ def extract_chunks(
                 phrases[_id][label].append(f"{doc[end]} {doc[start]}")
             if phrases:
                 yield phrases
-        if idx % 10 == 0:
-            typer.echo(idx * 10)
-            
+        typer.echo(f"processed {idx} table chunks..")
 
 
 def main(
     input_table: Path = typer.Argument(..., exists=True, dir_okay=False),
-    pattern_json1: Path = typer.Argument(..., exists=True, dir_okay=False),
-    pattern_json2: Path = typer.Argument(..., exists=True, dir_okay=False),
+    patterns: Path = typer.Argument(..., file_okay=True, dir_okay=True),
     output_jsonl: Path = typer.Argument(..., dir_okay=False),
     model: str = "en_core_web_sm",
     models_max_length: int = 2_000_000,
@@ -82,13 +95,9 @@ def main(
     """Extract noun phrases using spaCy."""
     nlp = spacy.load(model, disable=["ner"])
     nlp.max_length = models_max_length
-
-    pattern_vli = read_pattern(pattern_json1)
-    pattern_voz = read_pattern(pattern_json2)
-    matcher = DependencyMatcher(nlp.vocab)
-    matcher.add("Влияние", [pattern_vli])
-    matcher.add("Воздействие", [pattern_voz])
-
+    typer.echo(f"loaded {model} spaCy model...")
+    matcher = build_matcher(nlp, patterns)
+    typer.echo("built matcher...")
     csv_reader = pd.read_csv(input_table, chunksize=table_chunksize, encoding="utf-8")
     for document in extract_chunks(
         nlp=nlp,
