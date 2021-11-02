@@ -70,13 +70,18 @@ def extract_chunks(
         data_tuples = ((df.loc[idx, text], df.loc[idx, uuid]) for idx in df.index)
         for doc, _id in nlp.pipe(data_tuples, as_tuples=True):
             phrases: Phrases = {}
-            for match_id, (start, end) in matcher(doc):
+            for match_id, token_ids in matcher(doc):
                 label = nlp.vocab[match_id].text
+                _patterns = matcher._raw_patterns.get(match_id)[0]
+                token_matches = {
+                    _patterns[i].get("RIGHT_ID"): doc[token_ids[i]].text
+                    for i in range(len(token_ids))
+                }
                 if _id not in phrases:
                     phrases[_id] = {}
                 if label not in phrases[_id]:
                     phrases[_id][label] = []
-                phrases[_id][label].append(f"{doc[end]} {doc[start]}")
+                phrases[_id][label].append(token_matches)
             if phrases:
                 yield phrases
         typer.echo(f"processed {idx} table chunks..")
@@ -90,9 +95,9 @@ def main(
     models_max_length: int = 2_000_000,
     table_chunksize: int = 10,
     text_field: str = "fulltext",
-    uuid_field: str = "uuid"
+    uuid_field: str = "uuid",
 ) -> None:
-    """Extract noun phrases using spaCy."""
+    """Extract noun phrases using spaCy's dependency matcher."""
     nlp = spacy.load(model, disable=["ner"])
     nlp.max_length = models_max_length
     typer.echo(f"loaded {model} spaCy model...")
