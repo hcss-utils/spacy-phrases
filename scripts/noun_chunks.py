@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Typer app that extracts noun phrases using spaCy."""
+"""Typer app that extracts noun phrases using spaCy's noun_chunks."""
 import json
 from collections import defaultdict
 from pathlib import Path
