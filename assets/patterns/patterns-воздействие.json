@@ -1,0 +1,14 @@
+{
+    "pattern": [
+        {
+            "RIGHT_ID": "target",
+            "RIGHT_ATTRS": {"LEMMA": "воздействие"}
+        },
+        {
+            "LEFT_ID": "target",
+            "REL_OP": ">",
+            "RIGHT_ID": "modifier",
+            "RIGHT_ATTRS": {"POS": "ADJ"}
+        }
+    ]
+}
