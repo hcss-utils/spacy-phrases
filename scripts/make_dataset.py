@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
 """Transform document-based dataset into a sentence-based one."""
+import csv
 from enum import Enum
 from pathlib import Path
 from typing import Iterator, Tuple, Dict, Union
 
 import typer
 import spacy
-import pandas as pd  # type: ignore
 
-DocumentBased = Tuple[str]
+DocumentBased = Tuple[str, str]
 SentenceBased = Dict[str, Union[str, int]]
+
 
 class Language(str, Enum):
     """Languages that we pass into spaCy's blank model."""
@@ -25,9 +26,23 @@ def check_extension(path: Path) -> Path:
     return path
 
 
-def build_tuples(data: pd.DataFrame, uuid: str, text: str) -> DocumentBased:
+def write_csv(path: Path, data: SentenceBased, write_header: bool = False) -> None:
+    """Write processed data to .csv file, in chunks."""
+    with path.open("a", newline="", encoding="utf-8") as csv_file:
+        fieldnames = ["document_id", "sentence_id", "sentence"]
+        writer = csv.DictWriter(csv_file, delimiter=",", fieldnames=fieldnames)
+        if write_header:
+            writer.writeheader()
+        writer.writerow(data)
+
+
+def build_tuples(path: Path, uuid: str, text: str) -> Iterator[DocumentBased]:
     """Builds data tuples (text, identifier) for spaCy's pipes."""
-    return ((data.loc[idx, text], data.loc[idx, uuid]) for idx in data.index)
+    with path.open("r", newline="", encoding="utf-8") as csv_file:
+        csv_reader = csv.DictReader(csv_file, delimiter=",")
+        for row in csv_reader:
+            if row[text] is not None and row[uuid] is not None:
+                yield row[text], row[uuid]
 
 
 def sentencize(
@@ -47,21 +62,20 @@ def main(
     input_table: Path = typer.Argument(
         ..., exists=True, dir_okay=False, callback=check_extension
     ),
-    output_table: Path = typer.Argument(
-        ..., dir_okay=False, callback=check_extension
-    ),
+    output_table: Path = typer.Argument(..., dir_okay=False, callback=check_extension),
     lang: Language = typer.Option(Language.EN, help="sentecizer's base model"),
     text: str = "fulltext",
     uuid: str = "uuid",
 ) -> None:
     """Typer app that processes datasets."""
+    csv.field_size_limit(2_000_000)
     nlp = spacy.blank(lang)
     nlp.add_pipe("sentencizer")
 
-    data = pd.read_csv(input_table)
-    data_tuples = build_tuples(data, uuid, text)
+    data_tuples = build_tuples(input_table, uuid, text)
     sentencizer = sentencize(nlp, data_tuples)
-    pd.DataFrame(sentencizer).to_csv(output_table, index=False)
+    for idx, sentence in enumerate(sentencizer):
+        write_csv(output_table, sentence, idx == 0)
 
 
 if __name__ == "__main__":
