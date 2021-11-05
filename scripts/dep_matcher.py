@@ -52,22 +52,23 @@ def build_matcher(nlp: spacy.language.Language, patterns: Path) -> DependencyMat
 
 
 def match(
-    nlp: spacy.language.Language, data: DataTuple, matcher: DependencyMatcher, keep_text: bool
+    nlp: spacy.language.Language,
+    data: DataTuple,
+    matcher: DependencyMatcher,
+    keep_text: bool,
 ) -> Iterator[Phrases]:
-    """Extract noun-chunks from streamed 'csv_reader'.
+    """Match documents/sentences on dependecy tree.
 
     Parameters
     ----------
     nlp: spacy.language.Language
         language model that identifies phrases and takes care of lemmatization
+    data_tuples: DataTuple
+        tuple of text and its identifier
     matcher: DependencyMatcher
         spaCy's rule-based matcher
-    csv_reader: pd.io.parsers.TextFileReader
-        pandas' file reader that processes .csv file in chunks
-    text: str
-        text column that we extract phrases from (stored as dict values)
-    uuid: str
-        id column that we use to identify phrases (stored as dict keys)
+    keep_text: bool
+        whether to keep or discard original text
     """
     for doc, _id in nlp.pipe(data, as_tuples=True, batch_size=50):
         phrases: Phrases = {}
@@ -90,27 +91,30 @@ def match(
 
 
 def main(
-    input_table: Path = typer.Argument(..., exists=True, dir_okay=False),
-    patterns: Path = typer.Argument(..., file_okay=True, dir_okay=True),
-    output_jsonl: Path = typer.Argument(..., dir_okay=False),
-    model: str = "en_core_web_sm",
-    models_max_length: int = 2_000_000,
+    input_table: Path = typer.Argument(
+        ..., exists=True, dir_okay=False, help="Input table containing text & metadata"
+    ),
+    patterns: Path = typer.Argument(
+        ...,
+        file_okay=True,
+        dir_okay=True,
+        help="Directory or a single pattern file with rules",
+    ),
+    output_jsonl: Path = typer.Argument(
+        ..., dir_okay=False, help="Output JSONLines file where matches will be stored"
+    ),
+    model: str = typer.Option("en_core_web_sm", help="SpaCy model's name"),
+    models_max_length: int = typer.Option(2_000_000, help="Doc's max length."),
     text_field: str = "fulltext",
     uuid_field: str = "uuid",
     keep_text: bool = False,
 ) -> None:
-    """Extract noun phrases using spaCy's dependency matcher."""
+    """Match dependencies using spaCy's dependency matcher."""
     nlp = spacy.load(model)
     nlp.max_length = models_max_length
     csv.field_size_limit(models_max_length)
-    typer.echo(f"loaded {model} spaCy model...")
-
     matcher = build_matcher(nlp, patterns)
-    typer.echo("built matcher...")
-
     data_tuples = build_tuples(input_table, uuid=uuid_field, text=text_field)
-    typer.echo("built data_tuples...")
-
     for document in match(
         nlp=nlp, data=data_tuples, matcher=matcher, keep_text=keep_text
     ):
