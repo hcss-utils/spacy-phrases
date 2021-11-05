@@ -55,6 +55,7 @@ def match(
     nlp: spacy.language.Language,
     data: DataTuple,
     matcher: DependencyMatcher,
+    batch_size: int,
     keep_text: bool,
 ) -> Iterator[Phrases]:
     """Match documents/sentences on dependecy tree.
@@ -70,7 +71,7 @@ def match(
     keep_text: bool
         whether to keep or discard original text
     """
-    for doc, _id in nlp.pipe(data, as_tuples=True, batch_size=50):
+    for doc, _id in nlp.pipe(data, as_tuples=True, batch_size=batch_size):
         phrases: Phrases = {}
         for match_id, token_ids in matcher(doc):
             label = nlp.vocab[match_id].text
@@ -107,6 +108,7 @@ def main(
     models_max_length: int = typer.Option(2_000_000, help="Doc's max length."),
     text_field: str = "fulltext",
     uuid_field: str = "uuid",
+    batch_size: int = 50,
     keep_text: bool = False,
 ) -> None:
     """Match dependencies using spaCy's dependency matcher."""
@@ -116,7 +118,11 @@ def main(
     matcher = build_matcher(nlp, patterns)
     data_tuples = build_tuples(input_table, uuid=uuid_field, text=text_field)
     for document in match(
-        nlp=nlp, data=data_tuples, matcher=matcher, keep_text=keep_text
+        nlp=nlp,
+        data=data_tuples,
+        matcher=matcher,
+        batch_size=batch_size,
+        keep_text=keep_text,
     ):
         update_jsonl(output_jsonl, document)
 
