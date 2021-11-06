@@ -75,9 +75,9 @@ def match(
         phrases: Phrases = {}
         for match_id, token_ids in matcher(doc):
             label = nlp.vocab[match_id].text
-            _patterns = matcher._raw_patterns.get(match_id)[0]
+            _, pattern = matcher.get(label)
             token_matches = {
-                _patterns[i].get("RIGHT_ID"): doc[token_ids[i]].text
+                pattern[0][i].get("RIGHT_ID"): doc[token_ids[i]].text
                 for i in range(len(token_ids))
             }
             if keep_text:
