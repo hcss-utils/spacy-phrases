@@ -1,4 +1,4 @@
-# spacy-phrases
+# spacy-noun-phrases
 
 This repository contains spacy-based **`noun-phrases extraction`** scripts. 
 
