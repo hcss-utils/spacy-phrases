@@ -28,8 +28,21 @@ def update_jsonl(path: Path, lines: Phrases) -> None:
         output.write("\n")
 
 
+def create_nlp(
+    model: str, max_length: int, merge_entities: bool, merge_noun_chunks: bool
+) -> spacy.language.Language:
+    """Customize spaCy's built-in loader."""
+    nlp = spacy.load(model)
+    nlp.max_length = max_length
+    if merge_entities:
+        nlp.add_pipe("merge_entities")
+    if merge_noun_chunks:
+        nlp.add_pipe("merge_noun_chunks")
+    return nlp
+
+
 def build_tuples(path: Path, uuid: str, text: str) -> Iterator[DataTuple]:
-    """Builds data tuples (text, identifier) for spaCy's pipes."""
+    """Build data tuples (text, identifier) for spaCy's pipes."""
     with path.open("r", newline="", encoding="utf-8") as csv_file:
         csv_reader = csv.DictReader(csv_file, delimiter=",")
         for row in csv_reader:
@@ -53,7 +66,7 @@ def build_matcher(nlp: spacy.language.Language, patterns: Path) -> DependencyMat
 
 def match(
     nlp: spacy.language.Language,
-    data: DataTuple,
+    data: Iterator[DataTuple],
     matcher: DependencyMatcher,
     batch_size: int,
     keep_text: bool,
@@ -105,17 +118,18 @@ def main(
         ..., dir_okay=False, help="Output JSONLines file where matches will be stored"
     ),
     model: str = typer.Option("en_core_web_sm", help="SpaCy model's name"),
-    models_max_length: int = typer.Option(2_000_000, help="Doc's max length."),
+    docs_max_length: int = typer.Option(2_000_000, help="Doc's max length."),
+    merge_entities: bool = False,
+    merge_noun_chunks: bool = False,
     text_field: str = "fulltext",
     uuid_field: str = "uuid",
     batch_size: int = 50,
     keep_text: bool = False,
 ) -> None:
     """Match dependencies using spaCy's dependency matcher."""
-    nlp = spacy.load(model)
-    nlp.max_length = models_max_length
-    csv.field_size_limit(models_max_length)
+    nlp = create_nlp(model, docs_max_length, merge_entities, merge_noun_chunks)
     matcher = build_matcher(nlp, patterns)
+    csv.field_size_limit(docs_max_length)
     data_tuples = build_tuples(input_table, uuid=uuid_field, text=text_field)
     for document in match(
         nlp=nlp,
