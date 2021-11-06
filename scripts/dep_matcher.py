@@ -66,7 +66,7 @@ def build_matcher(nlp: spacy.language.Language, patterns: Path) -> DependencyMat
 
 def match(
     nlp: spacy.language.Language,
-    data: Iterator[DataTuple],
+    data_tuples: Iterator[DataTuple],
     matcher: DependencyMatcher,
     batch_size: int,
     keep_text: bool,
@@ -76,15 +76,17 @@ def match(
     Parameters
     ----------
     nlp: spacy.language.Language
-        language model that identifies phrases and takes care of lemmatization
+        spaCy's language model
     data_tuples: DataTuple
         tuple of text and its identifier
     matcher: DependencyMatcher
         spaCy's rule-based matcher
+    batch_size: int
+        the number of texts to buffer
     keep_text: bool
         whether to keep or discard original text
     """
-    for doc, _id in nlp.pipe(data, as_tuples=True, batch_size=batch_size):
+    for doc, _id in nlp.pipe(data_tuples, as_tuples=True, batch_size=batch_size):
         phrases: Phrases = {}
         for match_id, token_ids in matcher(doc):
             label = nlp.vocab[match_id].text
@@ -133,7 +135,7 @@ def main(
     data_tuples = build_tuples(input_table, uuid=uuid_field, text=text_field)
     for document in match(
         nlp=nlp,
-        data=data_tuples,
+        data_tuples=data_tuples,
         matcher=matcher,
         batch_size=batch_size,
         keep_text=keep_text,
