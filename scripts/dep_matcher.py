@@ -121,11 +121,11 @@ def main(
     ),
     model: str = typer.Option("en_core_web_sm", help="SpaCy model's name"),
     docs_max_length: int = typer.Option(2_000_000, help="Doc's max length."),
-    merge_entities: bool = False,
-    merge_noun_chunks: bool = False,
     text_field: str = "fulltext",
     uuid_field: str = "uuid",
     batch_size: int = 50,
+    merge_entities: bool = False,
+    merge_noun_chunks: bool = False,
     keep_text: bool = False,
 ) -> None:
     """Match dependencies using spaCy's dependency matcher."""
