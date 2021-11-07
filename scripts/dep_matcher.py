@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
 """spaCy's Dependency Matcher exposed via Typer app."""
+import csv
 import json
 from pathlib import Path
-from typing import Dict, Iterator, List, Union
+from typing import Dict, Iterator, List, Tuple, Union
 
-import pandas as pd  # type: ignore
 import typer
 import spacy
 from spacy.matcher import DependencyMatcher
 
+DataTuple = Tuple[str, str]
 Phrases = Dict[str, Dict[str, List[Dict[str, str]]]]
 Patterns = List[Dict[str, Union[str, Dict[str, str]]]]
 
@@ -27,6 +28,27 @@ def update_jsonl(path: Path, lines: Phrases) -> None:
         output.write("\n")
 
 
+def create_nlp(
+    model: str, max_length: int, merge_entities: bool, merge_noun_chunks: bool
+) -> spacy.language.Language:
+    """Customize spaCy's built-in loader."""
+    nlp = spacy.load(model)
+    nlp.max_length = max_length
+    if merge_entities:
+        nlp.add_pipe("merge_entities")
+    if merge_noun_chunks:
+        nlp.add_pipe("merge_noun_chunks")
+    return nlp
+
+
+def build_tuples(path: Path, uuid: str, text: str) -> Iterator[DataTuple]:
+    """Build data tuples (text, identifier) for spaCy's pipes."""
+    with path.open("r", newline="", encoding="utf-8") as csv_file:
+        csv_reader = csv.DictReader(csv_file, delimiter=",")
+        for row in csv_reader:
+            yield row[text], row[uuid]
+
+
 def build_matcher(nlp: spacy.language.Language, patterns: Path) -> DependencyMatcher:
     """Build Dependency Matcher."""
     matcher = DependencyMatcher(nlp.vocab)
@@ -42,74 +64,81 @@ def build_matcher(nlp: spacy.language.Language, patterns: Path) -> DependencyMat
     return matcher
 
 
-def extract_chunks(
+def match(
     nlp: spacy.language.Language,
+    data_tuples: Iterator[DataTuple],
     matcher: DependencyMatcher,
-    csv_reader: pd.io.parsers.TextFileReader,
-    text: str = "fulltext",
-    uuid: str = "uuid",
+    batch_size: int,
+    keep_text: bool,
 ) -> Iterator[Phrases]:
-    """Extract noun-chunks from streamed 'csv_reader'.
+    """Match documents/sentences on dependecy tree.
 
     Parameters
     ----------
     nlp: spacy.language.Language
-        language model that identifies phrases and takes care of lemmatization
+        spaCy's language model
+    data_tuples: Iterator[DataTuple]
+        tuple of text and its identifier
     matcher: DependencyMatcher
         spaCy's rule-based matcher
-    csv_reader: pd.io.parsers.TextFileReader
-        pandas' file reader that processes .csv file in chunks
-    text: str
-        text column that we extract phrases from (stored as dict values)
-    uuid: str
-        id column that we use to identify phrases (stored as dict keys)
+    batch_size: int
+        the number of texts to buffer
+    keep_text: bool
+        whether to keep or discard original text
     """
-    for idx, df in enumerate(csv_reader, start=1):
-        if df.empty:
-            continue
-        data_tuples = ((df.loc[idx, text], df.loc[idx, uuid]) for idx in df.index)
-        for doc, _id in nlp.pipe(data_tuples, as_tuples=True):
-            phrases: Phrases = {}
-            for match_id, token_ids in matcher(doc):
-                label = nlp.vocab[match_id].text
-                _patterns = matcher._raw_patterns.get(match_id)[0]
-                token_matches = {
-                    _patterns[i].get("RIGHT_ID"): doc[token_ids[i]].text
-                    for i in range(len(token_ids))
-                }
-                if _id not in phrases:
-                    phrases[_id] = {}
-                if label not in phrases[_id]:
-                    phrases[_id][label] = []
-                phrases[_id][label].append(token_matches)
-            if phrases:
-                yield phrases
-        typer.echo(f"processed {idx} table chunks..")
+    for doc, _id in nlp.pipe(data_tuples, as_tuples=True, batch_size=batch_size):
+        phrases: Phrases = {}
+        for match_id, token_ids in matcher(doc):
+            label = nlp.vocab[match_id].text
+            _, pattern = matcher.get(label)
+            token_matches = {
+                pattern[0][i].get("RIGHT_ID"): doc[token_ids[i]].text
+                for i in range(len(token_ids))
+            }
+            if keep_text:
+                token_matches = dict(**token_matches, text=doc.text)
+            if _id not in phrases:
+                phrases[_id] = {}
+            if label not in phrases[_id]:
+                phrases[_id][label] = []
+            phrases[_id][label].append(token_matches)
+        if phrases:
+            yield phrases
 
 
 def main(
-    input_table: Path = typer.Argument(..., exists=True, dir_okay=False),
-    patterns: Path = typer.Argument(..., file_okay=True, dir_okay=True),
-    output_jsonl: Path = typer.Argument(..., dir_okay=False),
-    model: str = "en_core_web_sm",
-    models_max_length: int = 2_000_000,
-    table_chunksize: int = 10,
+    input_table: Path = typer.Argument(
+        ..., exists=True, dir_okay=False, help="Input table containing text & metadata"
+    ),
+    patterns: Path = typer.Argument(
+        ...,
+        file_okay=True,
+        dir_okay=True,
+        help="Directory or a single pattern file with rules",
+    ),
+    output_jsonl: Path = typer.Argument(
+        ..., dir_okay=False, help="Output JSONLines file where matches will be stored"
+    ),
+    model: str = typer.Option("en_core_web_sm", help="SpaCy model's name"),
+    docs_max_length: int = typer.Option(2_000_000, help="Doc's max length."),
     text_field: str = "fulltext",
     uuid_field: str = "uuid",
+    batch_size: int = 50,
+    merge_entities: bool = False,
+    merge_noun_chunks: bool = False,
+    keep_text: bool = False,
 ) -> None:
-    """Extract noun phrases using spaCy's dependency matcher."""
-    nlp = spacy.load(model, disable=["ner"])
-    nlp.max_length = models_max_length
-    typer.echo(f"loaded {model} spaCy model...")
+    """Match dependencies using spaCy's dependency matcher."""
+    nlp = create_nlp(model, docs_max_length, merge_entities, merge_noun_chunks)
     matcher = build_matcher(nlp, patterns)
-    typer.echo("built matcher...")
-    csv_reader = pd.read_csv(input_table, chunksize=table_chunksize, encoding="utf-8")
-    for document in extract_chunks(
+    csv.field_size_limit(docs_max_length)
+    data_tuples = build_tuples(input_table, uuid=uuid_field, text=text_field)
+    for document in match(
         nlp=nlp,
+        data_tuples=data_tuples,
         matcher=matcher,
-        csv_reader=csv_reader,
-        text=text_field,
-        uuid=uuid_field,
+        batch_size=batch_size,
+        keep_text=keep_text,
     ):
         update_jsonl(output_jsonl, document)
 

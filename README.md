@@ -1,6 +1,6 @@
 # spacy-noun-phrases
 
-This repository contains spacy-based **`noun-phrases extraction`** scripts. 
+This repository contains spaCy's **`rule-based matching`** & **`noun-chunk extraction`** scripts.
 
 ## Installation
 
@@ -16,6 +16,12 @@ $ pip install -r requirements.txt
 ```
 
 ## Usage
+### Data transformation
+
+As in some cases we want to have a couple of 'versions' (document-, paragraph-, and sentence-based) of our corpora, 
+there's a [scripts/make_dataset.py](scripts/make_dataset.py) that transforms document-based datasets into a sentence-based ones.
+
+### Matching phrases
 
 We've developed two different approaches to extracting noun phrases:
 - our first guess was to use `Doc`'s `noun_chunks` attribute (we iterate 
@@ -41,8 +47,8 @@ Arguments:
 
 Options:
   --model TEXT                    [default: en_core_web_sm]
-  --models-max-length INTEGER     [default: 2000000]
-  --table-chunksize INTEGER       [default: 10]
+  --docs-max-length INTEGER       [default: 2000000]
+  --batch-size INTEGER            [default: 50]
   --text-field TEXT               [default: fulltext]
   --uuid-field TEXT               [default: uuid]
   --pattern TEXT                  [default: influenc]
@@ -51,7 +57,6 @@ Options:
   --show-completion [bash|zsh|fish|powershell|pwsh]
                                   Show completion for the specified shell, to
                                   copy it or customize the installation.
-
   --help                          Show this message and exit.
 ```
 
@@ -67,19 +72,25 @@ To extract phrases using Dependency Matcher approach, run `python scripts/dep_ma
 ```console
 Usage: dep_matcher.py [OPTIONS] INPUT_TABLE PATTERNS OUTPUT_JSONL
 
-  Extract noun phrases using spaCy's dependency matcher.
+  Match dependencies using spaCy's dependency matcher.
 
 Arguments:
-  INPUT_TABLE   [required]
-  PATTERNS      [required]
-  OUTPUT_JSONL  [required]
+  INPUT_TABLE   Input table containing text & metadata  [required]
+  PATTERNS      Directory or a single pattern file with rules  [required]
+  OUTPUT_JSONL  Output JSONLines file where matches will be stored  [required]
 
 Options:
-  --model TEXT                    [default: en_core_web_sm]
-  --models-max-length INTEGER     [default: 2000000]
-  --table-chunksize INTEGER       [default: 10]
+  --model TEXT                    SpaCy model's name  [default:
+                                  en_core_web_sm]
+  --docs-max-length INTEGER       Doc's max length.  [default: 2000000]
   --text-field TEXT               [default: fulltext]
   --uuid-field TEXT               [default: uuid]
+  --batch-size INTEGER            [default: 50]
+  --merge-entities / --no-merge-entities
+                                  [default: no-merge-entities]
+  --merge-noun-chunks / --no-merge-noun-chunks
+                                  [default: no-merge-noun-chunks]
+  --keep-text / --no-keep-text    [default: no-keep-text]
   --install-completion [bash|zsh|fish|powershell|pwsh]
                                   Install completion for the specified shell.
   --show-completion [bash|zsh|fish|powershell|pwsh]
@@ -90,7 +101,7 @@ Options:
 </p>
 </details>
 
----
+### Counting
 
 Once phrases/matches extracted, you could transform them into a usable format, or/and 
 count their frequencies:
