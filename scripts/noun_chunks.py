@@ -40,7 +40,7 @@ def extract_chunks(
     ----------
     nlp: spacy.language.Language
         language model that identifies phrases and takes care of lemmatization
-    data_tuples: DataTuple
+    data_tuples: Iterator[DataTuple]
         tuple of text and its identifier
     batch_size: int
         the number of texts to buffer
