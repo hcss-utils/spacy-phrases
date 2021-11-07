@@ -101,7 +101,7 @@ Options:
 </p>
 </details>
 
----
+### Counting
 
 Once phrases/matches extracted, you could transform them into a usable format, or/and 
 count their frequencies:

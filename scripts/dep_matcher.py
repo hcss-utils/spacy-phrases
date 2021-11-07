@@ -77,7 +77,7 @@ def match(
     ----------
     nlp: spacy.language.Language
         spaCy's language model
-    data_tuples: DataTuple
+    data_tuples: Iterator[DataTuple]
         tuple of text and its identifier
     matcher: DependencyMatcher
         spaCy's rule-based matcher
