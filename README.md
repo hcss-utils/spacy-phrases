@@ -1,8 +1,17 @@
-# spacy-noun-phrases
+# spacy-phrases
 
 This repository contains spaCy's **`rule-based matching`** & **`noun-chunk extraction`** scripts.
 
-## Installation
+## Google colabs
+
+| Colab | Description |
+| --- | --- |
+| [`sentencizer`](https://colab.research.google.com/drive/11dzY5m3swlIDfw7VTKz4StpvjTbi0MAn?usp=sharing) | Transform document-based dataset into a sentence-based one |
+| [`noun_chunks`](https://colab.research.google.com/drive/1yPwCk-ptJ9QQlzqUiNHeB3NR9Jnc0EIw?usp=sharing) | Extract noun phrases using spaCy's noun_chunks attribute |
+| [`dep_matcher`](https://colab.research.google.com/drive/17CDLmxSD0usg4dcJl1XcuTUejOLHyknj?usp=sharing) | Match documents/sentences on dependecy tree |
+
+
+## Installation (locally)
 
 To use or contribute to this repository, first checkout the code. 
 Then create a new virtual environment:
