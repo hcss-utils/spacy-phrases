@@ -16,14 +16,34 @@ This repository contains spaCy's **`rule-based matching`** & **`noun-chunk extra
 To use or contribute to this repository, first checkout the code. 
 Then create a new virtual environment:
 
+<details>
+<summary>Windows</summary>
+<p>
+
 ```console
 $ git clone https://github.com/hcss-utils/spacy-phrases.git
 $ cd spacy-phrases
-$ python3 -m venv env
+$ python -m venv env 
+$ . env/Scripts/activate
+$ pip install -r requirements.txt
+```
+</p>
+</details>
+
+<details>
+<summary>MacOS / Linux</summary>
+<p>
+
+```console
+$ git clone https://github.com/hcss-utils/spacy-phrases.git
+$ cd spacy-phrases
+$ python3 -m venv env 
 $ . env/bin/activate
 $ pip install -r requirements.txt
 ```
-
+</p>
+</details>
+  
 ## Usage
 ### Data transformation
 
