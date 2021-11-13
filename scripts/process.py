@@ -1,5 +1,5 @@
-#
-""" """
+# -*- coding: utf-8 -*-
+"""Text preprocessing."""
 import csv
 import json
 from pathlib import Path
@@ -11,7 +11,7 @@ import spacy
 from textacy import preprocessing, extract  # type: ignore
 
 DataTuple = Tuple[str, str]
-ProcessedDoc = Dict[str, Union[str, List[str], List[Dict[str, str]]]]
+ProcessedDoc = Dict[str, Union[str, List[str], List[Dict[str, List[str]]]]]
 
 preproc = preprocessing.make_pipeline(
     preprocessing.replace.emails,
@@ -53,16 +53,23 @@ def build_tuples(path: Path, uuid: str, text: str) -> Iterator[DataTuple]:
 
 
 def process(
-    nlp: spacy.language.Language, data: Iterator[DataTuple], batch_size: int
+    nlp: spacy.language.Language,
+    data: Iterator[DataTuple],
+    batch_size: int,
+    preprocess: bool,
+    lemmas: bool,
+    terms: bool,
+    sovs: bool,
 ) -> Iterator[ProcessedDoc]:
-    for idx, (doc, document_id) in enumerate(
-        nlp.pipe(data, as_tuples=True, batch_size=batch_size), start=1
-    ):
-        yield {
-            "document_id": document_id,
-            "processed_text": preproc(doc.text),
-            "lemmas": [t.lemma_ for t in doc if t.is_alpha and not t.is_stop],
-            "terms": [
+    """Preprocessing text."""
+    for doc, document_id in nlp.pipe(data, as_tuples=True, batch_size=batch_size):
+        record : ProcessedDoc = {"document_id": document_id}
+        if preprocess:
+            record["processed_text"] = preproc(doc.text)
+        if lemmas:
+            record["lemmas"] = [t.lemma_ for t in doc if t.is_alpha and not t.is_stop]
+        if terms:
+            record["terms"] = [
                 span.text
                 for span in extract.terms(
                     doc,
@@ -72,16 +79,17 @@ def process(
                     ncs=True,
                     ngs=lambda doc: extract.ngrams(doc, n=(2, 3)),
                 )
-            ],
-            "subject_verb_object_triples": [
+            ]
+        if sovs:
+            record["subject_verb_object_triples"] = [
                 dict(
                     s=[s.text for s in svo.subject],
                     v=[v.text for v in svo.verb],
                     o=[o.text for o in svo.object],
                 )
                 for svo in extract.subject_verb_object_triples(doc)
-            ],
-        }
+            ]
+        yield record
 
 
 def main(
@@ -96,11 +104,23 @@ def main(
     text_field: str = "fulltext",
     uuid_field: str = "uuid",
     batch_size: int = 50,
+    preprocess: bool = True,
+    lemmas: bool = False,
+    terms: bool = False,
+    sovs: bool = False,
 ):
     csv.field_size_limit(docs_max_length)
     nlp = create_nlp(model, docs_max_length)
     data_tuples = build_tuples(input_table, uuid_field, text_field)
-    for doc in process(nlp, data_tuples, batch_size):
+    for doc in process(
+        nlp=nlp,
+        data=data_tuples,
+        batch_size=batch_size,
+        preprocess=preprocess,
+        lemmas=lemmas,
+        terms=terms,
+        sovs=sovs,
+    ):
         update_jsonl(output_jsonl, doc)
 
 
