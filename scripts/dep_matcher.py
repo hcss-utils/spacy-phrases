@@ -86,18 +86,18 @@ def match(
     keep_fulltext: bool
         whether to keep or discard original text
     """
-    for doc, _id in nlp.pipe(data_tuples, as_tuples=True, batch_size=batch_size):
+    for counter, (doc, _id) in enumerate(nlp.pipe(data_tuples, as_tuples=True, batch_size=batch_size, n_process=2)):
         phrases: Phrases = {}
         for match_id, token_ids in matcher(doc):
             label = nlp.vocab[match_id].text
             _, pattern = matcher.get(label)
             token_matches = {
-                pattern[0][i].get("RIGHT_ID"): doc[token_ids[i]].text
+                pattern[0][i].get("RIGHT_ID"): doc[token_ids[i]].lemma_.lower()
                 for i in range(len(token_ids))
             }
-            sent = doc[min(token_ids)].sent
-            token_matches["sentence"] = doc[sent.start : sent.end].text
             if keep_fulltext:
+                sent = doc[min(token_ids)].sent
+                token_matches["sentence"] = doc[sent.start : sent.end].text
                 token_matches["fulltext"] = doc.text
             if _id not in phrases:
                 phrases[_id] = {}
@@ -106,6 +106,7 @@ def match(
             phrases[_id][label].append(token_matches)
         if phrases:
             yield phrases
+        typer.echo(counter)
 
 
 def main(
