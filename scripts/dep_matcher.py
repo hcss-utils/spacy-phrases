@@ -69,7 +69,7 @@ def match(
     data_tuples: Iterator[DataTuple],
     matcher: DependencyMatcher,
     batch_size: int,
-    keep_text: bool,
+    keep_fulltext: bool,
 ) -> Iterator[Phrases]:
     """Match documents/sentences on dependecy tree.
 
@@ -83,7 +83,7 @@ def match(
         spaCy's rule-based matcher
     batch_size: int
         the number of texts to buffer
-    keep_text: bool
+    keep_fulltext: bool
         whether to keep or discard original text
     """
     for doc, _id in nlp.pipe(data_tuples, as_tuples=True, batch_size=batch_size):
@@ -95,8 +95,10 @@ def match(
                 pattern[0][i].get("RIGHT_ID"): doc[token_ids[i]].text
                 for i in range(len(token_ids))
             }
-            if keep_text:
-                token_matches = dict(**token_matches, text=doc.text)
+            sent = doc[min(token_ids)].sent
+            token_matches["sentence"] = doc[sent.start : sent.end].text
+            if keep_fulltext:
+                token_matches["fulltext"] = doc.text
             if _id not in phrases:
                 phrases[_id] = {}
             if label not in phrases[_id]:
@@ -126,7 +128,7 @@ def main(
     batch_size: int = 50,
     merge_entities: bool = False,
     merge_noun_chunks: bool = False,
-    keep_text: bool = False,
+    keep_fulltext: bool = False,
 ) -> None:
     """Match dependencies using spaCy's dependency matcher."""
     nlp = create_nlp(model, docs_max_length, merge_entities, merge_noun_chunks)
@@ -138,7 +140,7 @@ def main(
         data_tuples=data_tuples,
         matcher=matcher,
         batch_size=batch_size,
-        keep_text=keep_text,
+        keep_fulltext=keep_fulltext,
     ):
         update_jsonl(output_jsonl, document)
 
