@@ -3,7 +3,7 @@
 import csv
 import json
 from pathlib import Path
-from typing import Dict, Iterator, List, Tuple, Union
+from typing import Dict, Iterator, List, Optional, Set, Tuple, Union
 
 import typer
 import spacy
@@ -12,6 +12,19 @@ from spacy.matcher import DependencyMatcher
 DataTuple = Tuple[str, str]
 Phrases = Dict[str, Dict[str, List[Dict[str, str]]]]
 Patterns = List[Dict[str, Union[str, Dict[str, str]]]]
+
+
+def read_processed_data(path: Path) -> Set[str]:
+    """Collect processed uuids."""
+    seen: Set[str] = set()
+    if not path.exists():
+        return seen
+    with path.open("r", encoding="utf-8") as lines:
+        for line in lines:
+            data = json.loads(line)
+            for uuid in data.keys():
+                seen.add(uuid)
+    return seen
 
 
 def read_pattern(path: Path) -> Patterns:
@@ -41,11 +54,15 @@ def create_nlp(
     return nlp
 
 
-def build_tuples(path: Path, uuid: str, text: str) -> Iterator[DataTuple]:
+def build_tuples(
+    path: Path, uuid: str, text: str, processed_uuids: Set[str]
+) -> Iterator[DataTuple]:
     """Build data tuples (text, identifier) for spaCy's pipes."""
     with path.open("r", newline="", encoding="utf-8") as csv_file:
         csv_reader = csv.DictReader(csv_file, delimiter=",")
         for row in csv_reader:
+            if row[uuid] in processed_uuids:
+                continue
             yield row[text], row[uuid]
 
 
@@ -69,6 +86,7 @@ def match(
     data_tuples: Iterator[DataTuple],
     matcher: DependencyMatcher,
     batch_size: int,
+    keep_sentence: bool,
     keep_fulltext: bool,
 ) -> Iterator[Phrases]:
     """Match documents/sentences on dependecy tree.
@@ -83,10 +101,12 @@ def match(
         spaCy's rule-based matcher
     batch_size: int
         the number of texts to buffer
+    keep_sentence: bool
+        whether to keep or discard sentence within which matches occur
     keep_fulltext: bool
         whether to keep or discard original text
     """
-    for counter, (doc, _id) in enumerate(nlp.pipe(data_tuples, as_tuples=True, batch_size=batch_size, n_process=2)):
+    for doc, _id in nlp.pipe(data_tuples, as_tuples=True, batch_size=batch_size):
         phrases: Phrases = {}
         for match_id, token_ids in matcher(doc):
             label = nlp.vocab[match_id].text
@@ -95,9 +115,10 @@ def match(
                 pattern[0][i].get("RIGHT_ID"): doc[token_ids[i]].lemma_.lower()
                 for i in range(len(token_ids))
             }
-            if keep_fulltext:
+            if keep_sentence:
                 sent = doc[min(token_ids)].sent
                 token_matches["sentence"] = doc[sent.start : sent.end].text
+            if keep_fulltext:
                 token_matches["fulltext"] = doc.text
             if _id not in phrases:
                 phrases[_id] = {}
@@ -106,7 +127,6 @@ def match(
             phrases[_id][label].append(token_matches)
         if phrases:
             yield phrases
-        typer.echo(counter)
 
 
 def main(
@@ -129,18 +149,23 @@ def main(
     batch_size: int = 50,
     merge_entities: bool = False,
     merge_noun_chunks: bool = False,
+    keep_sentence: bool = False,
     keep_fulltext: bool = False,
 ) -> None:
     """Match dependencies using spaCy's dependency matcher."""
     nlp = create_nlp(model, docs_max_length, merge_entities, merge_noun_chunks)
     matcher = build_matcher(nlp, patterns)
     csv.field_size_limit(docs_max_length)
-    data_tuples = build_tuples(input_table, uuid=uuid_field, text=text_field)
+    processed_uuids = read_processed_data(output_jsonl)
+    data_tuples = build_tuples(
+        input_table, uuid=uuid_field, text=text_field, processed_uuids=processed_uuids
+    )
     for document in match(
         nlp=nlp,
         data_tuples=data_tuples,
         matcher=matcher,
         batch_size=batch_size,
+        keep_sentence=keep_sentence,
         keep_fulltext=keep_fulltext,
     ):
         update_jsonl(output_jsonl, document)
