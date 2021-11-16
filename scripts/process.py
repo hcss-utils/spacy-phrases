@@ -63,7 +63,7 @@ def process(
 ) -> Iterator[ProcessedDoc]:
     """Preprocessing text."""
     for doc, document_id in nlp.pipe(data, as_tuples=True, batch_size=batch_size):
-        record : ProcessedDoc = {"document_id": document_id}
+        record: ProcessedDoc = {"document_id": document_id}
         if preprocess:
             record["processed_text"] = preproc(doc.text)
         if lemmas:
@@ -108,7 +108,10 @@ def main(
     lemmas: bool = False,
     terms: bool = False,
     sovs: bool = False,
-):
+) -> None:
+    """Preprocess dataset."""
+    if not any(pipe for pipe in [preprocess, lemmas, terms, sovs]):
+        raise ValueError("You should call at least 1 pipeline.")
     csv.field_size_limit(docs_max_length)
     nlp = create_nlp(model, docs_max_length)
     data_tuples = build_tuples(input_table, uuid_field, text_field)
