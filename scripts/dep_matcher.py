@@ -3,6 +3,7 @@
 import csv
 import json
 from pathlib import Path
+from collections import defaultdict
 from typing import Dict, Iterator, List, Optional, Set, Tuple, Union
 
 import typer
@@ -107,7 +108,7 @@ def match(
         whether to keep or discard original text
     """
     for doc, _id in nlp.pipe(data_tuples, as_tuples=True, batch_size=batch_size):
-        phrases: Phrases = {}
+        phrases: Phrases = defaultdict(lambda: defaultdict(list))
         for match_id, token_ids in matcher(doc):
             label = nlp.vocab[match_id].text
             _, pattern = matcher.get(label)
@@ -120,10 +121,6 @@ def match(
                 token_matches["sentence"] = doc[sent.start : sent.end].text
             if keep_fulltext:
                 token_matches["fulltext"] = doc.text
-            if _id not in phrases:
-                phrases[_id] = {}
-            if label not in phrases[_id]:
-                phrases[_id][label] = []
             phrases[_id][label].append(token_matches)
         if phrases:
             yield phrases
