@@ -8,8 +8,7 @@ from typing import Dict, Iterator, List, Optional, Set, Tuple, Union
 
 import typer
 import spacy
-from spacy.tokens.doc import Doc
-from spacy.tokens.span import Span
+from spacy.tokens import Doc, Span
 from spacy.matcher import DependencyMatcher
 
 DataTuple = Tuple[str, str]
@@ -111,7 +110,7 @@ def get_paragraph(doc: Doc, sent: Span, depth: int = 1) -> Span:
         next_sent = get_next_sentence(doc, next_sent)
     previous_sent_i = None if previous_sent is None else previous_sent[0].i
     next_sent_i = None if next_sent is None else next_sent[-1].i
-    return doc[previous_sent_i:next_sent_i]
+    return doc[previous_sent_i:next_sent_i].text
 
 
 def match(
@@ -151,7 +150,7 @@ def match(
             if keep_sentence:
                 sent = doc[min(token_ids)].sent
                 token_matches["sentence"] = doc[sent.start:sent.end].text
-                token_matches["paragraph"] = get_paragraph(doc, sent).text
+                token_matches["paragraph"] = get_paragraph(doc, sent)
             if keep_fulltext:
                 token_matches["fulltext"] = doc.text
             phrases[_id][label].append(token_matches)
