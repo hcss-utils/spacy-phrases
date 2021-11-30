@@ -8,6 +8,8 @@ from typing import Dict, Iterator, List, Optional, Set, Tuple, Union
 
 import typer
 import spacy
+from spacy.tokens.doc import Doc
+from spacy.tokens.span import Span
 from spacy.matcher import DependencyMatcher
 
 DataTuple = Tuple[str, str]
@@ -82,6 +84,36 @@ def build_matcher(nlp: spacy.language.Language, patterns: Path) -> DependencyMat
     return matcher
 
 
+def get_previous_sentence(doc: Doc, sent: Optional[Span]) -> Optional[Span]:
+    """Extract previous sentence before `sent`."""
+    if sent is None:
+        return None
+    if sent.start - 1 < 0:
+        return None
+    return doc[sent.start - 1].sent
+
+
+def get_next_sentence(doc: Doc, sent: Optional[Span]) -> Optional[Span]:
+    """Extract next sentence after `sent`."""
+    if sent is None:
+        return None
+    if sent.end + 1 >= len(doc):
+        return None
+    return doc[sent.end + 1].sent
+
+
+def get_paragraph(doc: Doc, sent: Span, depth: int = 1) -> Span:
+    """Structurally, extract paragraph (`depth` sents before and after `sent`)."""
+    previous_sent = get_previous_sentence(doc, sent)
+    next_sent = get_next_sentence(doc, sent)
+    for _ in range(1, depth):
+        previous_sent = get_previous_sentence(doc, previous_sent)
+        next_sent = get_next_sentence(doc, next_sent)
+    previous_sent_i = None if previous_sent is None else previous_sent[0].i
+    next_sent_i = None if next_sent is None else next_sent[-1].i
+    return doc[previous_sent_i:next_sent_i]
+
+
 def match(
     nlp: spacy.language.Language,
     data_tuples: Iterator[DataTuple],
@@ -118,7 +150,8 @@ def match(
             }
             if keep_sentence:
                 sent = doc[min(token_ids)].sent
-                token_matches["sentence"] = doc[sent.start : sent.end].text
+                token_matches["sentence"] = doc[sent.start:sent.end].text
+                token_matches["paragraph"] = get_paragraph(doc, sent).text
             if keep_fulltext:
                 token_matches["fulltext"] = doc.text
             phrases[_id][label].append(token_matches)
