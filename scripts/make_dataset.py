@@ -16,6 +16,7 @@ SentenceBased = Dict[str, Union[str, int]]
 
 class Languages(str, Enum):
     """Languages that we pass into spaCy's blank model."""
+
     EN = "en"
     RU = "ru"
 
@@ -42,14 +43,12 @@ def write_csv(path: Path, data: SentenceBased, write_header: bool = False) -> No
 def set_paragraph_boundaries(doc: Doc) -> Doc:
     """Split Doc on newline chars instead of on the default punct_chars."""
     for token in doc[:-1]:
-        if token.text.startswith("\n"):
-            doc[token.i + 1].is_sent_start = True
+        doc[token.i + 1].is_sent_start = token.text.startswith("\n")
+    assert doc.has_annotation("SENT_START"), "Sentence boundaries unset"
     return doc
 
 
-def create_nlp(
-    lang: Languages, on_paragraph: bool, max_length: int
-) -> Language:
+def create_nlp(lang: Languages, on_paragraph: bool, max_length: int) -> Language:
     """Customize spaCy's built-in loader."""
     nlp = spacy.blank(lang)
     custom_pipe = "set_paragraph_boundaries" if on_paragraph else "sentencizer"
