@@ -101,8 +101,8 @@ def get_next_sentence(doc: Doc, sent: Optional[Span]) -> Optional[Span]:
     return doc[sent.end + 1].sent
 
 
-def get_paragraph(doc: Doc, sent: Span, depth: int = 1) -> Span:
-    """Structurally, extract paragraph (`depth` sents before and after `sent`)."""
+def get_context(doc: Doc, sent: Span, depth: int = 1) -> Span:
+    """Structurally, extract context (`depth` sents before and after `sent`)."""
     previous_sent = get_previous_sentence(doc, sent)
     next_sent = get_next_sentence(doc, sent)
     for _ in range(1, depth):
@@ -150,7 +150,7 @@ def match(
             if keep_sentence:
                 sent = doc[min(token_ids)].sent
                 token_matches["sentence"] = doc[sent.start:sent.end].text
-                token_matches["paragraph"] = get_paragraph(doc, sent)
+                token_matches["sent_context"] = get_context(doc, sent)
             if keep_fulltext:
                 token_matches["fulltext"] = doc.text
             phrases[_id][label].append(token_matches)
