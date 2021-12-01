@@ -119,6 +119,7 @@ def match(
     matcher: DependencyMatcher,
     batch_size: int,
     keep_sentence: bool,
+    context_depth: int,
     keep_fulltext: bool,
 ) -> Iterator[Phrases]:
     """Match documents/sentences on dependecy tree.
@@ -135,6 +136,8 @@ def match(
         the number of texts to buffer
     keep_sentence: bool
         whether to keep or discard sentence within which matches occur
+    context_depth: Optional[int]
+        N sents before and after relevant sent
     keep_fulltext: bool
         whether to keep or discard original text
     """
@@ -149,8 +152,10 @@ def match(
             }
             if keep_sentence:
                 sent = doc[min(token_ids)].sent
-                token_matches["sentence"] = doc[sent.start:sent.end].text
-                token_matches["sent_context"] = get_context(doc, sent)
+                token_matches["sentence"] = doc[sent.start : sent.end].text
+            if context_depth:
+                sent = doc[min(token_ids)].sent
+                token_matches["sent_context"] = get_context(doc, sent, context_depth)
             if keep_fulltext:
                 token_matches["fulltext"] = doc.text
             phrases[_id][label].append(token_matches)
@@ -176,6 +181,7 @@ def main(
     text_field: str = "fulltext",
     uuid_field: str = "uuid",
     batch_size: int = 50,
+    context_depth: Optional[int] = None,
     merge_entities: bool = False,
     merge_noun_chunks: bool = False,
     keep_sentence: bool = False,
@@ -195,6 +201,7 @@ def main(
         matcher=matcher,
         batch_size=batch_size,
         keep_sentence=keep_sentence,
+        context_depth=context_depth,
         keep_fulltext=keep_fulltext,
     ):
         update_jsonl(output_jsonl, document)
