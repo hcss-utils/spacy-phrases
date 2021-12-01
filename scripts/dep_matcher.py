@@ -8,6 +8,7 @@ from typing import Dict, Iterator, List, Optional, Set, Tuple, Union
 
 import typer
 import spacy
+from spacy.tokens import Doc, Span
 from spacy.matcher import DependencyMatcher
 
 DataTuple = Tuple[str, str]
@@ -82,12 +83,43 @@ def build_matcher(nlp: spacy.language.Language, patterns: Path) -> DependencyMat
     return matcher
 
 
+def get_previous_sentence(doc: Doc, sent: Optional[Span]) -> Optional[Span]:
+    """Extract previous sentence before `sent`."""
+    if sent is None:
+        return None
+    if sent.start - 1 < 0:
+        return None
+    return doc[sent.start - 1].sent
+
+
+def get_next_sentence(doc: Doc, sent: Optional[Span]) -> Optional[Span]:
+    """Extract next sentence after `sent`."""
+    if sent is None:
+        return None
+    if sent.end + 1 >= len(doc):
+        return None
+    return doc[sent.end + 1].sent
+
+
+def get_context(doc: Doc, sent: Span, depth: int = 1) -> Span:
+    """Structurally, extract context (`depth` sents before and after `sent`)."""
+    previous_sent = get_previous_sentence(doc, sent)
+    next_sent = get_next_sentence(doc, sent)
+    for _ in range(1, depth):
+        previous_sent = get_previous_sentence(doc, previous_sent)
+        next_sent = get_next_sentence(doc, next_sent)
+    previous_sent_i = None if previous_sent is None else previous_sent[0].i
+    next_sent_i = None if next_sent is None else next_sent[-1].i
+    return doc[previous_sent_i:next_sent_i].text
+
+
 def match(
     nlp: spacy.language.Language,
     data_tuples: Iterator[DataTuple],
     matcher: DependencyMatcher,
     batch_size: int,
     keep_sentence: bool,
+    context_depth: int,
     keep_fulltext: bool,
 ) -> Iterator[Phrases]:
     """Match documents/sentences on dependecy tree.
@@ -104,6 +136,8 @@ def match(
         the number of texts to buffer
     keep_sentence: bool
         whether to keep or discard sentence within which matches occur
+    context_depth: Optional[int]
+        N sents before and after relevant sent
     keep_fulltext: bool
         whether to keep or discard original text
     """
@@ -119,6 +153,9 @@ def match(
             if keep_sentence:
                 sent = doc[min(token_ids)].sent
                 token_matches["sentence"] = doc[sent.start : sent.end].text
+            if context_depth:
+                sent = doc[min(token_ids)].sent
+                token_matches["sent_context"] = get_context(doc, sent, context_depth)
             if keep_fulltext:
                 token_matches["fulltext"] = doc.text
             phrases[_id][label].append(token_matches)
@@ -144,6 +181,7 @@ def main(
     text_field: str = "fulltext",
     uuid_field: str = "uuid",
     batch_size: int = 50,
+    context_depth: Optional[int] = None,
     merge_entities: bool = False,
     merge_noun_chunks: bool = False,
     keep_sentence: bool = False,
@@ -163,6 +201,7 @@ def main(
         matcher=matcher,
         batch_size=batch_size,
         keep_sentence=keep_sentence,
+        context_depth=context_depth,
         keep_fulltext=keep_fulltext,
     ):
         update_jsonl(output_jsonl, document)

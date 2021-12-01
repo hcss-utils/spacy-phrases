@@ -1,12 +1,13 @@
 # spacy-phrases
 
-This repository contains spaCy's **`rule-based matching`** & **`noun-chunk extraction`** scripts.
+This repository contains spaCy's **`rule-based matching`** & 
+**`noun-chunk extraction`** scripts.
 
 ## Google colabs
 
 | Colab | Description |
 | --- | --- |
-| [`sentencizer`](https://colab.research.google.com/drive/11dzY5m3swlIDfw7VTKz4StpvjTbi0MAn?usp=sharing) | Transform document-based dataset into a sentence-based one |
+| [`make_dataset`](https://colab.research.google.com/drive/11dzY5m3swlIDfw7VTKz4StpvjTbi0MAn?usp=sharing) | Transform document-based dataset into a paragraph/sentence-based one |
 | [`noun_chunks`](https://colab.research.google.com/drive/1yPwCk-ptJ9QQlzqUiNHeB3NR9Jnc0EIw?usp=sharing) | Extract noun phrases using spaCy's noun_chunks attribute |
 | [`dep_matcher`](https://colab.research.google.com/drive/17CDLmxSD0usg4dcJl1XcuTUejOLHyknj?usp=sharing) | Match documents/sentences on dependecy tree |
 
@@ -47,8 +48,43 @@ $ pip install -r requirements.txt
 ## Usage
 ### Data transformation
 
-As in some cases we want to have a couple of 'versions' (document-, paragraph-, and sentence-based) of our corpora, 
-there's a [scripts/make_dataset.py](scripts/make_dataset.py) that transforms document-based datasets into a sentence-based ones.
+As in some cases we want to have a couple of 'versions' (document-, paragraph-, 
+and sentence-based) of our corpora, there are a [scripts/make_dataset.py](scripts/make_dataset.py) 
+that transforms document-based datasets into a paragraph/sentence-based ones 
+and [scripts/process.py](scripts/process.py) that handles text preprocessing.
+
+<details>
+<summary>Data transformation</summary>
+<p>
+
+To prepare dataset, run `python scripts/make_dataset.py`: 
+
+```console
+Usage: make_dataset.py [OPTIONS] INPUT_TABLE OUTPUT_TABLE
+
+  Typer app that processes datasets.
+
+Arguments:
+  INPUT_TABLE   [required]
+  OUTPUT_TABLE  [required]
+
+Options:
+  --lang [en|ru]                  sentecizer's base model  [default:
+                                  Languages.EN]
+  --docs-max-length INTEGER       Doc's max length.  [default: 2000000]
+  --paragraph / --sentence        [default: sentence]
+  --text TEXT                     [default: fulltext]
+  --uuid TEXT                     [default: uuid]
+  --lemmatize / --no-lemmatize    [default: no-lemmatize]
+  --install-completion [bash|zsh|fish|powershell|pwsh]
+                                  Install completion for the specified shell.
+  --show-completion [bash|zsh|fish|powershell|pwsh]
+                                  Show completion for the specified shell, to
+                                  copy it or customize the installation.
+  --help                          Show this message and exit.
+```
+</p>
+</details>
 
 ### Matching phrases
 
@@ -56,8 +92,8 @@ We've developed two different approaches to extracting noun phrases:
 - our first guess was to use `Doc`'s `noun_chunks` attribute (we iterate 
 over noun_chunks and keep those that fit out criteria). 
 But this approach isn't perfect and doesn't for work ru models.
-- we then moved to `Rule-based matching` which is more flexible as long as you write accurate patterns 
-(and works for both en and ru models).
+- we then moved to `Rule-based matching` which is more flexible as long as 
+you write accurate patterns (and works for both en and ru models).
 
 <details>
 <summary>Noun_chunks</summary>
@@ -115,11 +151,15 @@ Options:
   --text-field TEXT               [default: fulltext]
   --uuid-field TEXT               [default: uuid]
   --batch-size INTEGER            [default: 50]
+  --context-depth INTEGER
   --merge-entities / --no-merge-entities
                                   [default: no-merge-entities]
   --merge-noun-chunks / --no-merge-noun-chunks
                                   [default: no-merge-noun-chunks]
-  --keep-text / --no-keep-text    [default: no-keep-text]
+  --keep-sentence / --no-keep-sentence
+                                  [default: no-keep-sentence]
+  --keep-fulltext / --no-keep-fulltext
+                                  [default: no-keep-fulltext]
   --install-completion [bash|zsh|fish|powershell|pwsh]
                                   Install completion for the specified shell.
   --show-completion [bash|zsh|fish|powershell|pwsh]
@@ -132,8 +172,8 @@ Options:
 
 ### Counting
 
-Once phrases/matches extracted, you could transform them into a usable format, or/and 
-count their frequencies:
+Once phrases/matches extracted, you could transform them into a usable format, 
+or/and count their frequencies:
 - to extract phrases from matches (process rule-based matching output), 
 see [notebooks/count-matcher-phrases.ipynb](notebooks/count-matcher-phrases.ipynb)
 - to count extacted phrases, 
