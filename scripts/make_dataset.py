@@ -42,8 +42,9 @@ def write_csv(path: Path, data: SentenceBased, write_header: bool = False) -> No
 @Language.component("set_paragraph_boundaries")
 def set_paragraph_boundaries(doc: Doc) -> Doc:
     """Split Doc on newline chars instead of on the default punct_chars."""
+    delim = ("\n", "<p>")
     for token in doc[:-1]:
-        doc[token.i + 1].is_sent_start = token.text.startswith("\n")
+        doc[token.i + 1].is_sent_start = token.text.startswith(delim)
     assert doc.has_annotation("SENT_START"), "Sentence boundaries unset"
     return doc
 
