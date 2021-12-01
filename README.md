@@ -50,6 +50,39 @@ $ pip install -r requirements.txt
 As in some cases we want to have a couple of 'versions' (document-, paragraph-, and sentence-based) of our corpora, 
 there's a [scripts/make_dataset.py](scripts/make_dataset.py) that transforms document-based datasets into a sentence-based ones.
 
+<details>
+<summary>Data prep</summary>
+<p>
+
+To prepare dataset, run `python scripts/make_dataset.py`: 
+
+```console
+Usage: make_dataset.py [OPTIONS] INPUT_TABLE OUTPUT_TABLE
+
+  Typer app that processes datasets.
+
+Arguments:
+  INPUT_TABLE   [required]
+  OUTPUT_TABLE  [required]
+
+Options:
+  --lang [en|ru]                  sentecizer's base model  [default:
+                                  Languages.EN]
+  --docs-max-length INTEGER       Doc's max length.  [default: 2000000]
+  --paragraph / --sentence        [default: sentence]
+  --text TEXT                     [default: fulltext]
+  --uuid TEXT                     [default: uuid]
+  --lemmatize / --no-lemmatize    [default: no-lemmatize]
+  --install-completion [bash|zsh|fish|powershell|pwsh]
+                                  Install completion for the specified shell.
+  --show-completion [bash|zsh|fish|powershell|pwsh]
+                                  Show completion for the specified shell, to
+                                  copy it or customize the installation.
+  --help                          Show this message and exit.
+```
+</p>
+</details>
+
 ### Matching phrases
 
 We've developed two different approaches to extracting noun phrases:
@@ -115,11 +148,15 @@ Options:
   --text-field TEXT               [default: fulltext]
   --uuid-field TEXT               [default: uuid]
   --batch-size INTEGER            [default: 50]
+  --context-depth INTEGER
   --merge-entities / --no-merge-entities
                                   [default: no-merge-entities]
   --merge-noun-chunks / --no-merge-noun-chunks
                                   [default: no-merge-noun-chunks]
-  --keep-text / --no-keep-text    [default: no-keep-text]
+  --keep-sentence / --no-keep-sentence
+                                  [default: no-keep-sentence]
+  --keep-fulltext / --no-keep-fulltext
+                                  [default: no-keep-fulltext]
   --install-completion [bash|zsh|fish|powershell|pwsh]
                                   Install completion for the specified shell.
   --show-completion [bash|zsh|fish|powershell|pwsh]
