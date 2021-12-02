@@ -124,10 +124,8 @@ def main(
     data_tuples = build_tuples(input_table, uuid, text, processed_uuids)
     transformer = transform(nlp, data_tuples, add_lemmas=lemmatize)
     for idx, sentence in enumerate(transformer):
-        write_header = True if idx == 0 and not processed_uuids else False
+        write_header = bool(idx == 0 and not processed_uuids)
         write_csv(output_table, sentence, write_header)
-        if idx % 10_000 == 0:
-            typer.echo(idx)
 
 
 if __name__ == "__main__":
