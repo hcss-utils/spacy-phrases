@@ -49,13 +49,6 @@ def create_nlp(model: str, max_length: int) -> spacy.language.Language:
     return nlp
 
 
-def update_jsonl(path: Path, lines: ProcessedDoc) -> None:
-    """Update JSONLines file with content."""
-    with path.open("a", encoding="utf-8") as output:
-        json.dump(lines, output, ensure_ascii=False)
-        output.write("\n")
-
-
 def build_tuples(
     path: Path, uuid: str, text: str, processed_uuids: Set[str]
 ) -> Iterator[DataTuple]:
