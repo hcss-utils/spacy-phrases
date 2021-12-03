@@ -3,7 +3,7 @@
 import csv
 from enum import Enum
 from pathlib import Path
-from typing import Iterator, Tuple, Dict, Union
+from typing import Dict, Iterator, Set, Tuple, Union
 
 import typer
 import spacy
@@ -27,6 +27,18 @@ def check_extension(path: Path) -> Path:
         typer.echo("You need to pass .csv file")
         raise typer.Exit(code=1)
     return path
+
+
+def read_processed_data(path: Path) -> Set[str]:
+    """Collect processed uuids."""
+    seen: Set[str] = set()
+    if not path.exists():
+        return seen
+    with path.open("r", newline="", encoding="utf-8") as csv_file:
+        csv_reader = csv.DictReader(csv_file, delimiter=",")
+        for row in csv_reader:
+            seen.add(row["document_id"])
+    return seen
 
 
 def write_csv(path: Path, data: SentenceBased, write_header: bool = False) -> None:
@@ -58,12 +70,16 @@ def create_nlp(lang: Languages, on_paragraph: bool, max_length: int) -> Language
     return nlp
 
 
-def build_tuples(path: Path, uuid: str, text: str) -> Iterator[DocumentBased]:
+def build_tuples(
+    path: Path, uuid: str, text: str, processed_uuids: Set[str]
+) -> Iterator[DocumentBased]:
     """Builds data tuples (text, identifier) for spaCy's pipes."""
     with path.open("r", newline="", encoding="utf-8") as csv_file:
         csv_reader = csv.DictReader(csv_file, delimiter=",")
         for row in csv_reader:
             if row[text] is not None and row[uuid] is not None:
+                if row[uuid] in processed_uuids:
+                    continue
                 yield row[text], row[uuid]
 
 
@@ -104,10 +120,12 @@ def main(
     """Typer app that processes datasets."""
     csv.field_size_limit(docs_max_length)
     nlp = create_nlp(lang, on_paragraph=on_paragraph, max_length=docs_max_length)
-    data_tuples = build_tuples(input_table, uuid, text)
+    processed_uuids = read_processed_data(output_table)
+    data_tuples = build_tuples(input_table, uuid, text, processed_uuids)
     transformer = transform(nlp, data_tuples, add_lemmas=lemmatize)
     for idx, sentence in enumerate(transformer):
-        write_csv(output_table, sentence, idx == 0)
+        write_header = bool(idx == 0 and not processed_uuids)
+        write_csv(output_table, sentence, write_header)
 
 
 if __name__ == "__main__":
